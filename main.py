@@ -1,28 +1,53 @@
+#
+#
+#
+
 from tkinter import *
+from PIL import Image, ImageTk
 from tkinter import ttk, simpledialog
 import random
 from BubbleSort import bubble_sort
+from LinearSearch import linear_search
+from BinarySearch import binary_search
+
+# Color Palate
+# #57447a Background Dark Violet
+# #332848 Very Dark Violet
+# #3c2f54 Very Dark Saturated Violet
+# #ADD8E6 Default Graph Blue
+# #4f69c3 Moderate Blue
+# #bc2e51 Strong Red
+# #257157 Very Dark Cyan-Lime Green
+
 
 # Creating the main window
 root = Tk()
 root.title("Sorting Algorithm Visualizer")
 root.maxsize(1920, 1080)
-root.config(bg='#2C3E50')
+root.config(bg='#57447a')
+
+# Creating a gradient background
+image = Image.open("gradient.png")
+image = image.resize((root.winfo_screenwidth(), root.winfo_screenheight()))
+photo = ImageTk.PhotoImage(image)
+label = Label(root, image=photo)
+label.place(x=0, y=0, relwidth=1, relheight=1)
 
 # Variables
 selected_alg = StringVar()
+selected_search = StringVar()
 data = []
 
 
 # The main function that Draws the bars in the Canvas
-def drawData(data, colorArray):
+def drawData(Data, colorArray):
     canvas.delete("all")
     c_height = 580
     c_width = 850
-    x_width = c_width / (len(data) + 1)
-    offset = 30
+    x_width = c_width / (len(Data) + 1)
+    offset = 35
     spacing = 10
-    normalizedData = [i / max(data) for i in data]  # normalizing the data to scale with the canvas
+    normalizedData = [i / max(Data) for i in Data]  # normalizing the data to scale with the canvas
     for i, height in enumerate(normalizedData):  # Create boxes
         # top left
         x0 = i * x_width + offset + spacing
@@ -30,8 +55,11 @@ def drawData(data, colorArray):
         # bottom right
         x1 = ((i + 1) * x_width) + offset
         y1 = c_height
-        canvas.create_rectangle(x0, y0, x1, y1, fill=colorArray[i])
-        canvas.create_text(x0 + 2, y0, anchor=SW, text=str(data[i]))  # Text over boxes
+        canvas.create_rectangle(x0, y0, x1, y1, fill=colorArray[i], outline="")
+        # Text over boxes
+        x = (x0 + x1) / 2
+        y = y0 - 10
+        canvas.create_text(x, y, anchor='center', text=str(Data[i]), font=("Helvetica", 10))
     root.update_idletasks()
 
 
@@ -41,12 +69,21 @@ def edit_data():
     # Create a new window for editing the data
     edit_window = Toplevel(root)
     edit_window.title('Edit Data')
-    edit_window.geometry('300x350')
+    edit_window.geometry('300x400')
+    edit_window.config(bg="#3c2f54")
 
     # Create a listbox containing the current data list
     data_listbox = Listbox(edit_window)
-    data_listbox.pack(fill=BOTH, expand=YES)
-    data_listbox.config(font=('Helvetica', 14))
+    data_listbox.pack(fill=BOTH, expand=YES, padx=10, pady=10)
+    data_listbox.config(font=('Arial Rounded MT Bold', 14), highlightthickness=0, borderwidth=0)
+
+    # Add a scrollbar
+    scrollbar = Scrollbar(edit_window)
+    scrollbar.pack(side=RIGHT, fill=Y)
+    data_listbox.config(yscrollcommand=scrollbar.set)
+    scrollbar.config(command=data_listbox.yview)
+
+    # Populate the listbox with data
     for item in data:
         data_listbox.insert(END, str(item))
 
@@ -58,7 +95,7 @@ def edit_data():
             data_listbox.delete(index)
             data.pop(index)
 
-    delete_button = Button(edit_window, text='Delete Selected Item', command=delete_item)
+    delete_button = Button(edit_window, text='Delete Selected Item', command=delete_item, bg='#bc2e51', fg="white", width=18, font=('Arial Rounded MT Bold', 8), pady=5)
     delete_button.pack()
 
     # Add a button for modifying the currently selected item in the listbox and data list
@@ -72,7 +109,7 @@ def edit_data():
                 data_listbox.delete(index)
                 data_listbox.insert(index, str(new_value))
 
-    modify_button = Button(edit_window, text='Modify Selected Item', command=modify_item)
+    modify_button = Button(edit_window, text='Modify Selected Item', command=modify_item, bg="#4f69c3", fg='white', width=18, font=('Arial Rounded MT Bold', 8), pady=5)
     modify_button.pack()
 
     # Add a button for adding a new item to the listbox and data list
@@ -82,7 +119,7 @@ def edit_data():
             data.append(new_value)
             data_listbox.insert(END, str(new_value))
 
-    add_button = Button(edit_window, text='Add Item', command=add_item)
+    add_button = Button(edit_window, text='Add Item', command=add_item, bg="#4f69c3", fg='white', width=18, font=('Arial Rounded MT Bold', 8), pady=5)
     add_button.pack()
 
     # Add a button for saving the changes and closing the window
@@ -91,17 +128,20 @@ def edit_data():
         new_data = []
         for i in range(data_listbox.size()):
             new_data.append(int(data_listbox.get(i)))
-        data = new_data
+        Data = new_data
         edit_window.destroy()
-        drawData(data, ['#ADD8E6' for x in range(len(data))])
+        drawData(Data, ['#ADD8E6' for x in range(len(Data))])
 
-    save_button = Button(edit_window, text='Save Changes', command=save_changes)
+    save_button = Button(edit_window, text='Save Changes', command=save_changes, bg='#257157', fg='white', width=18, font=('Arial Rounded MT Bold', 8), pady=5)
     save_button.pack()
 
 
 # Function to generate values within given range
 def Generate():
     global data
+
+    # Clearing Listbox
+    listbox.delete(0, END)
 
     minVal = int(minEntry.get())
     maxVal = int(maxEntry.get())
@@ -117,79 +157,124 @@ def Generate():
     drawData(data, ['#ADD8E6' for x in range(len(data))])
 
     # Create an Edit button
-    edit_button = Button(UI_frame, text='Edit', command=edit_data, bg='#FFB830', fg='black', font=('Helvetica', 12))
+    edit_button = Button(UI_Frame, text='Edit', command=edit_data, bg='#257157', fg='white', font=('Arial Rounded MT Bold', 14), width=9, pady=5)
+
     edit_button.grid(row=10, column=0, padx=5, pady=5)
 
 
 # Function to start the bubble sort algorithm
 def StartAlgorithm():
     global data
-    bubble_sort(data, drawData, speedScale.get())
+    bubble_sort(data, drawData, speedScale.get(), listbox)
+
+
+# Function to start searching
+def StartSearching():
+    global data
+    search_item = int(input_SearchBox.get(1.0, END))
+    if selected_search.get() == "Linear Search":
+        linear_search(data, drawData, SearchSpeedScale.get(), search_item, listbox)
+    else:
+        binary_search(data, drawData, SearchSpeedScale.get(), search_item, listbox)
 
 
 # UI Base Frame
 
 # Interface to hold the widgets
-UI_frame = Frame(root, width=400, height=700, bg='#34495E')
-UI_frame.grid(row=0, column=1, padx=20, pady=10)
+UI_Frame = Frame(root, width=400, height=800, bg='#332848')
+UI_Frame.grid(row=0, column=1, padx=10, pady=10, sticky=N)
 
 # Interface for graphics
-canvas = Canvas(root, width=900, height=580, bg='white')
-canvas.grid(row=0, column=0, padx=20, pady=10)
+canvas = Canvas(root, width=900, height=580, bg='#FFFFFF')
+canvas.grid(row=0, column=0, padx=10, pady=10)
 
 # User Interface Area
-# Row[0]
-algo_label = Label(UI_frame, text='Algorithm:', bg='#34495E', fg='white', font=('Helvetica', 16, 'bold'))
+algo_label = Label(UI_Frame, text='Algorithm', bg='#332848', fg='#FFFFFF', font=('Helvetica', 16, 'bold'))
 algo_label.grid(row=0, column=0, padx=5, pady=5)
 
+# Listbox for Showing Real time text
+listbox = Listbox(root, width=100, height=3)
+listbox.grid(row=1, column=0, padx=5, pady=5)
+listbox.config(font=('Consolas', 12), background="#332848", fg="#FFFFFF")
+listbox.config(highlightthickness=0, borderwidth=0, justify=CENTER)
+
+
 # Dropdown menu for algorithms
-algMenu = ttk.Combobox(UI_frame, textvariable=selected_alg, values=['Bubble Sort', 'Merge sort'], font=('Consolas', 12))
+algMenu = ttk.Combobox(UI_Frame, textvariable=selected_alg, values=['Bubble Sort', 'Merge sort'], font=('Consolas', 12))
 algMenu.grid(row=1, column=0, padx=5, pady=5)
 algMenu.current(0)  # Default value of dropdown box
 
 # Speed Scale to choose how fast or slow
-speedScale = Scale(UI_frame, from_=0, to=2.0, length=200, digits=2, resolution=0.1, orient=HORIZONTAL,
-                   label="Select Speed [s]", font=('Consolas', 10))
-speedScale.set(0.1)
-speedScale.configure(sliderrelief="flat", activebackground='#D50032')
+speedScale = Scale(UI_Frame, from_=0, to=3.0, length=200, digits=2, resolution=0.1, orient=HORIZONTAL, label="Select Speed [s]", font=('Consolas', 10))
+speedScale.set(0.5)
+speedScale.configure(sliderrelief="flat", activebackground='#5b4882')
 speedScale.grid(row=5, column=0, padx=5, pady=5)
 
 # Start button to start the sorting process
-start_button = Button(UI_frame, text='Start', command=StartAlgorithm, bg='#D50032', fg='white', font=('Helvetica', 14))
+start_button = Button(UI_Frame, text='Start', command=StartAlgorithm, bg='#bc2e51', fg='#FFFFFF', font=('Arial Rounded MT Bold', 14), width=9, pady=5)
 start_button.grid(row=9, column=0, padx=5, pady=5)
 
-# Row[1]
 # Scale to select the size of the array
-sizeEntry = Scale(UI_frame, from_=3, to=40, length=200, resolution=1, orient=HORIZONTAL, label="Data Size",
-                  font=('Consolas', 10))
-sizeEntry.set(20)
-sizeEntry.configure(sliderrelief="flat", activebackground='#D50032')
+sizeEntry = Scale(UI_Frame, from_=3, to=40, length=200, resolution=1, orient=HORIZONTAL, label="Data Size", font=('Consolas', 10))
+sizeEntry.set(10)
+sizeEntry.configure(sliderrelief="flat", activebackground='#5b4882')
 sizeEntry.grid(row=2, column=0, padx=5, pady=5)
 
 # Scale to select the minimum value of the array
-minEntry = Scale(UI_frame, from_=0, to=10, length=200, resolution=1, orient=HORIZONTAL, label="Min Value",
-                 font=('Consolas', 10))
-minEntry.configure(sliderrelief="flat", activebackground='#D50032')
+minEntry = Scale(UI_Frame, from_=0, to=10, length=200, resolution=1, orient=HORIZONTAL, label="Min Value", font=('Consolas', 10))
+minEntry.configure(sliderrelief="flat", activebackground='#5b4882')
 minEntry.grid(row=3, column=0, padx=5, pady=5)
 
 # Scale to select the maximum value of the array
-maxEntry = Scale(UI_frame, from_=15, to=150, length=200, resolution=1, orient=HORIZONTAL, label="Max Value",
-                 font=('Consolas', 10))
+maxEntry = Scale(UI_Frame, from_=15, to=150, length=200, resolution=1, orient=HORIZONTAL, label="Max Value", font=('Consolas', 10))
 maxEntry.set(50)
-maxEntry.configure(sliderrelief="flat", activebackground='#D50032')
+maxEntry.configure(sliderrelief="flat", activebackground='#5b4882')
 maxEntry.grid(row=4, column=0, padx=5, pady=5)
 
 # Generate button to create random data
-generate_button = Button(UI_frame, text='Generate', command=Generate, bg='#3498DB', fg='black', font=('Helvetica', 14))
+generate_button = Button(UI_Frame, text='Generate', command=Generate, bg='#4f69c3', fg='#FFFFFF', font=('Arial Rounded MT Bold', 14), width=9, pady=5)
 generate_button.grid(row=8, column=0, padx=5, pady=5)
 
-# Row[2]
 # Text box for manual user input
-input_label = Label(UI_frame, text='Input Values:', bg='#34495E', fg='white', font=('Helvetica', 12, 'bold'))
+input_label = Label(UI_Frame, text='Input Values', bg='#332848', fg='#FFFFFF', font=('Helvetica', 12, 'bold'))
 input_label.grid(row=6, column=0, padx=5, pady=5)
 
-input_box = Text(UI_frame, height=1, width=30, font=('Consolas', 10))
+input_box = Text(UI_Frame, height=1, width=30, font=('Consolas', 10))
 input_box.grid(row=7, column=0, padx=5, pady=5, columnspan=2)
+
+# The Searching Interface
+
+
+# UI Search Frame
+UI_SearchFrame = Frame(root, width=400, height=400, bg='#332848')
+UI_SearchFrame.grid(row=0, column=2, padx=10, pady=10, sticky=N)
+
+# User Interface Area for search
+
+search_label = Label(UI_SearchFrame, text='Search', bg='#332848', fg='white', font=('Helvetica', 16, 'bold'))
+search_label.grid(row=0, column=0, padx=5, pady=5)
+
+# Dropdown menu for search
+searchMenu = ttk.Combobox(UI_SearchFrame, textvariable=selected_search, values=['Linear Search', 'Binary Search'], font=('Consolas', 12))
+searchMenu.grid(row=1, column=0, padx=5, pady=5)
+searchMenu.current(1)  # Default value of dropdown search box
+
+# Speed Scale For Search
+SearchSpeedScale = Scale(UI_SearchFrame, from_=0, to=3.0, length=200, digits=2, resolution=0.1, orient=HORIZONTAL, label="Select Speed [s]", font=('Consolas', 10))
+SearchSpeedScale.set(1.0)
+SearchSpeedScale.configure(sliderrelief="flat", activebackground='#5b4882')
+SearchSpeedScale.grid(row=2, column=0, padx=5, pady=5)
+
+# Text box for manual search input
+input_SearchLabel = Label(UI_SearchFrame, text='Input search element', bg='#332848', fg='white', font=('Helvetica', 12, 'bold'))
+input_SearchLabel.grid(row=3, column=0, padx=5, pady=5)
+input_SearchBox = Text(UI_SearchFrame, height=1, width=30, font=('Consolas', 10))
+input_SearchBox.grid(row=4, column=0, padx=5, pady=5)
+
+# Search button to start the searching process
+search_button = Button(UI_SearchFrame, text='Search', command=StartSearching, bg='#bc2e51', fg='white', font=('Arial Rounded MT Bold', 14), width=9, pady=5)
+search_button.grid(row=5, column=0, padx=5, pady=5)
+
 
 # Main graphics loop
 root.mainloop()
